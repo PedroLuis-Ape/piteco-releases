@@ -19,6 +19,10 @@
   .botao[hidden] { display: none; }
   .aviso { color: #c0392b; font-weight: 600; }
   small { display: block; margin-top: 14px; color: var(--suave); font-size: 14px; }
+  .codigo { margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(127,127,127,.25); }
+  .codigo[hidden] { display: none; }
+  .codigo code { display: block; margin: 10px 0; padding: 12px; border-radius: 10px; background: var(--fundo); color: var(--texto); font: 600 18px/1.4 ui-monospace, Consolas, monospace; word-break: break-all; user-select: all; }
+  .copiar { width: 100%; padding: 14px 20px; border: 2px solid var(--azul); border-radius: 14px; background: transparent; color: var(--azul); font: 700 18px system-ui, sans-serif; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -27,11 +31,18 @@
   <h1 id="titulo">Entrar no Piteco</h1>
   <p id="mensagem">Toque no botão para abrir o Piteco já com a sua conta.</p>
   <a id="abrir" class="botao" href="#">Abrir o Piteco</a>
-  <small id="ajuda">Se o navegador perguntar se pode abrir o Piteco, aceite. Abra este e-mail no mesmo aparelho em que quer entrar.</small>
+  <small id="ajuda">Se o navegador perguntar se pode abrir o Piteco, aceite.</small>
+  <section id="bloco-codigo" class="codigo" hidden>
+    <p>O app não abriu? Copie este código e cole no Piteco, em <strong>Configurações → Conta e sincronização</strong>:</p>
+    <code id="codigo"></code>
+    <button id="copiar" class="copiar" type="button">Copiar código</button>
+    <small>O código vale uma vez só. Não mande para ninguém.</small>
+  </section>
 </main>
 <script>
-  // The sign-in result arrives after "#", which never leaves this browser: this page sends nothing anywhere. It only
-  // hands it to the Piteco app through a button the person taps (browsers only open an app on a real tap).
+  // The sign-in result arrives after "#", which never leaves this browser: this page sends nothing anywhere. It hands it
+  // to the Piteco app through a button the person taps (browsers only open an app on a real tap) or, when the browser
+  // will not open the app, as a code the person copies and pastes in the app.
   (function () {
     var fragmento = location.hash.slice(1);
     var dados = new URLSearchParams(fragmento);
@@ -49,6 +60,26 @@
     } else if (!dados.get("access_token")) {
       mensagem.textContent = "Esta página é a volta do login do Piteco. Abra o link do e-mail que o Piteco mandou.";
       botao.hidden = true;
+    } else if (dados.get("refresh_token")) {
+      // The same session, as a code to paste in the app when the browser does not open it. It works once.
+      var codigo = dados.get("refresh_token");
+      var copiar = document.getElementById("copiar");
+      document.getElementById("codigo").textContent = codigo;
+      document.getElementById("bloco-codigo").hidden = false;
+      copiar.addEventListener("click", function () {
+        var pronto = function () { copiar.textContent = "Copiado! Agora cole no Piteco"; };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(codigo).then(pronto, function () { selecionar(); });
+        } else { selecionar(); }
+      });
+      var selecionar = function () {
+        var faixa = document.createRange();
+        faixa.selectNodeContents(document.getElementById("codigo"));
+        var selecao = window.getSelection();
+        selecao.removeAllRanges();
+        selecao.addRange(faixa);
+        copiar.textContent = "Código selecionado: copie e cole no Piteco";
+      };
     }
   })();
 </script>
